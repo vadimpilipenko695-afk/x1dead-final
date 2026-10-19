@@ -127,7 +127,6 @@ EGLBoolean hk_swap(EGLDisplay d, EGLSurface s) {
     return orig_swap ? orig_swap(d, s) : EGL_FALSE;
 }
 
-// Хук на GameController, чтобы поймать загруженную игру
 typedef void* (*GetInstFn)(void*);
 GetInstFn orig_get_inst = nullptr;
 bool g_egl_hooked = false;
@@ -148,9 +147,9 @@ void* hk_get_inst(void* method) {
     return result;
 }
 
-__attribute__((constructor))
-void init() {
-    LOG("libx1dead loading...");
+extern "C" jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    LOG("JNI_OnLoad called!");
+    
     for (int i = 0; i < 20; ++i) {
         base = (uintptr_t)dlopen("libil2cpp.so", RTLD_LAZY | RTLD_NOLOAD);
         if (base) break;
@@ -158,8 +157,12 @@ void init() {
     }
     
     if (base) {
-        LOG("il2cpp found!");
+        LOG("il2cpp found at %p", (void*)base);
         void* target = (void*)(base + O_GameController_get_Instance);
         inline_hook(target, (void*)hk_get_inst, (void**)&orig_get_inst);
+    } else {
+        LOG("libil2cpp not found");
     }
+    
+    return JNI_VERSION_1_6;
 }
